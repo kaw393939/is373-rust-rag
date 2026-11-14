@@ -78,7 +78,7 @@ No students should copy the instructor's IP, secret key, Keychain entries or SSH
 The workflow [ci.yml](../../.github/workflows/ci.yml) has four stages:
 
 1. Rust formatting, Clippy, unit tests, credential-free account/control-plane integration tests, frontend tests/build and docs/config checks.
-2. Native AMD64 and ARM64 application builds with extraction smoke tests; embedding builds with a real pinned-model download, normalized-vector check and 320 MiB memory cap.
+2. Native AMD64 and ARM64 application builds with extraction smoke tests; embedding builds with a real pinned-model download, normalized-vector check and 320 MiB memory cap. The actual production Compose profile also boots in an isolated test project, imports the corpus and exercises secure-cookie authentication with synthetic credentials.
 3. Publish tested architecture images, provenance/SBOM metadata and combined manifests. App tag: `sha-<commit>`. Embedding tag: `embeddings-sha-<commit>`.
 4. For `main` only, send the two immutable manifest digests and source revision through restricted SSH. Pull requests never publish or deploy; version tags publish without automatically replacing production.
 

@@ -10,7 +10,7 @@ services:
     mem_limit: 384m
     cpus: 0.65
     pids_limit: 96
-    tmpfs: [/tmp:size=96m,mode=1777]
+    tmpfs: ["/tmp:size=96m,mode=1777"]
     stop_grace_period: 25s
     environment:
       APP_ENV: production
@@ -55,7 +55,7 @@ services:
     mem_limit: 320m
     cpus: 0.5
     pids_limit: 48
-    tmpfs: [/tmp:size=16m,mode=1777]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
     volumes: [model-cache:/models:ro]
     networks: [private]
     logging: {driver: json-file, options: {max-size: 5m, max-file: '2'}}
