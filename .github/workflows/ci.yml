@@ -83,6 +83,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=embeddings-${{ matrix.arch }}
       - name: Test real CPU embeddings under the production memory limit
         run: python3 scripts/check_embeddings.py is373-embeddings-test:latest
+      - name: Boot and verify the production Compose profile
+        run: python3 scripts/check_production_compose.py is373-test:latest is373-embeddings-test:latest
       - name: Publish tested embedding architecture
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
