@@ -1,0 +1,165 @@
+{
+  "date": "2026-11-13",
+  "configuration": {
+    "chat_model": "llama3.2:latest",
+    "chat_provider": "ollama",
+    "embedding_available": true,
+    "index": {
+      "chunk_count": 10,
+      "corpus_hash": "ec6c3de4e92e8505165a7b1562adead1ad428b88c4dfec8a58c1d962e48b5be9",
+      "dimensions": 768,
+      "identity": {
+        "model": "nomic-embed-text:latest",
+        "provider": "ollama",
+        "revision": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f"
+      },
+      "indexed_at": 1794611794,
+      "source_count": 5
+    },
+    "note": "Chat model readiness is verified on generation.",
+    "ready": true,
+    "storage": "SQLite + sqlite-vec"
+  },
+  "results": [
+    {
+      "case": "exact",
+      "question": "How much is the annual membership fee?",
+      "answer": "The annual membership fee is $15 [membership:p2].",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 7.49,
+      "vector_source_ids": [
+        "membership:p2",
+        "membership:p3",
+        "committee:p3",
+        "events:p3"
+      ],
+      "keyword_source_ids": [
+        "membership:p2",
+        "committee:p2",
+        "committee:p3",
+        "events:p3"
+      ],
+      "manual_review": {
+        "supported": true,
+        "finding": "Answer checked against retrieved passages; abstention appropriate for the unanswerable case."
+      }
+    },
+    {
+      "case": "paraphrase",
+      "question": "Who puts together the club's learning sessions?",
+      "answer": "The Events Committee organizes the club's learning sessions, as stated in the evidence that \"The Events Committee organizes monthly workshops and publishes each event's location in the bulletin.\" [events:p2].",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 6.08,
+      "vector_source_ids": [
+        "events:p2",
+        "contacts:p3",
+        "events:p3",
+        "committee:p3"
+      ],
+      "keyword_source_ids": [
+        "conduct:p3",
+        "contacts:p2",
+        "membership:p2",
+        "membership:p3"
+      ],
+      "manual_review": {
+        "supported": true,
+        "finding": "Answer checked against retrieved passages; abstention appropriate for the unanswerable case."
+      }
+    },
+    {
+      "case": "relationship",
+      "question": "Does the secretary approve membership applications?",
+      "answer": "The secretary does not approve membership applications [membership:p3]. The secretary confirms receipt of applications by email, but the application process does not include approval [membership:p3].",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 5.04,
+      "vector_source_ids": [
+        "committee:p3",
+        "membership:p3",
+        "conduct:p3",
+        "contacts:p2"
+      ],
+      "keyword_source_ids": [
+        "committee:p3",
+        "committee:p2",
+        "membership:p3",
+        "conduct:p3"
+      ],
+      "manual_review": {
+        "supported": false,
+        "finding": "Cites membership:p3 (receipt confirmation) for the non-approval claim supported by committee:p3. Also says the application process does not include approval, which overgeneralizes the evidence. Automatic reference resolution did not detect this."
+      }
+    },
+    {
+      "case": "procedure",
+      "question": "Can visitors attend public workshops?",
+      "answer": "Visitors may attend public workshops after signing in at the welcome desk. [events:p3]",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 3.53,
+      "vector_source_ids": [
+        "events:p3",
+        "contacts:p3",
+        "conduct:p3",
+        "events:p2"
+      ],
+      "keyword_source_ids": [
+        "events:p3",
+        "contacts:p3",
+        "committee:p2",
+        "conduct:p3"
+      ],
+      "manual_review": {
+        "supported": true,
+        "finding": "Answer checked against retrieved passages; abstention appropriate for the unanswerable case."
+      }
+    },
+    {
+      "case": "unanswerable",
+      "question": "What is the exact date of next year's annual meeting?",
+      "answer": "I do not have enough evidence to answer this question.",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 2.43,
+      "vector_source_ids": [
+        "events:p3",
+        "events:p2",
+        "contacts:p3",
+        "committee:p2"
+      ],
+      "keyword_source_ids": [
+        "events:p3",
+        "conduct:p2",
+        "membership:p2",
+        "committee:p2"
+      ],
+      "manual_review": {
+        "supported": true,
+        "finding": "Answer checked against retrieved passages; abstention appropriate for the unanswerable case."
+      }
+    }
+  ]
+}

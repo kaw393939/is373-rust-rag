@@ -1,0 +1,71 @@
+{
+  "chat_model": "gemma3:4b",
+  "results": [
+    {
+      "kind": "exact",
+      "question": "How much is the annual membership fee?",
+      "answer": "The annual membership fee is $15. [membership:p2]",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 14.71,
+      "manual_source_support": "pass"
+    },
+    {
+      "kind": "paraphrase",
+      "question": "Who puts together the club's learning sessions?",
+      "answer": "The Events Committee organizes the club\u2019s learning sessions [events:p2].",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 12.1,
+      "manual_source_support": "pass"
+    },
+    {
+      "kind": "relationship",
+      "question": "Does the secretary approve membership applications?",
+      "answer": "No, the secretary does not approve membership applications. [committee:p3] The secretary coordinates messages from new members, but the secretary does not approve membership applications. [membership:p3] Applications are submitted to the club secretary.",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 19.33,
+      "manual_source_support": "mixed",
+      "manual_note": "The first non-approval claim correctly cites committee:p3. A repeated non-approval claim is followed by membership:p3, which only supports submission and receipt confirmation."
+    },
+    {
+      "kind": "procedure",
+      "question": "Can visitors attend public workshops?",
+      "answer": "Yes, visitors may attend public workshops after signing in at the welcome desk [events:p3]. The welcome desk is staffed during scheduled public workshops, but it is not open every day [contacts:p3]. These events are organized by the Events Committee and published in the bulletin [events:p2].",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 24.57,
+      "manual_source_support": "pass"
+    },
+    {
+      "kind": "unanswerable",
+      "question": "What is the exact date of next year's annual meeting?",
+      "answer": "I do not have enough evidence to answer this question.",
+      "checks": {
+        "expected_evidence": true,
+        "expected_answer_marker": true,
+        "citations_resolve": true,
+        "completed": true
+      },
+      "elapsed_seconds": 12.57,
+      "manual_source_support": "pass"
+    }
+  ]
+}

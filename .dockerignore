@@ -1,0 +1,13 @@
+.git
+.github
+.env
+.env.*
+data
+target
+tmp
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/*.pyc
+docs
+.DS_Store

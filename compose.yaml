@@ -1,0 +1,41 @@
+name: is373-rust-rag
+services:
+  app:
+    image: ${ORDO_IMAGE:-kaw393939/is373-rust-rag:latest}
+    build: .
+    ports:
+      - "127.0.0.1:${PORT:-3730}:3730"
+    environment:
+      PORT: "3730"
+      BIND_ADDRESS: "0.0.0.0"
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      CHAT_PROVIDER: ${CHAT_PROVIDER:-ollama}
+      CHAT_MODEL: ${CHAT_MODEL:-gemma3:4b}
+      VISION_MODEL: ${VISION_MODEL:-gemma3:4b}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text:latest}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      WHISPER_VARIANT: ${WHISPER_VARIANT:-small}
+      WHISPER_MODEL: /app/data/models/ggml-${WHISPER_VARIANT:-small}.bin
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-auto}
+      VIDEO_SAMPLE_FRAMES: ${VIDEO_SAMPLE_FRAMES:-3}
+    volumes:
+      - app-data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 20s
+  ollama:
+    image: ollama/ollama:0.40.16
+    profiles: [local-models]
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+volumes:
+  app-data:
+  ollama-data:

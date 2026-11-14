@@ -1,0 +1,16 @@
+{
+  "provider": "groq",
+  "model": "openai/gpt-oss-20b",
+  "results": [
+    {
+      "question": "Membership fee",
+      "answer": "The annual membership fee is **$15**\u3010[membership:p2]\u3011.",
+      "outcome": "complete"
+    },
+    {
+      "question": "PDF notebook",
+      "answer": "The PDF asks you to bring an **orange** notebook\u3010[attachment-29f605bb-0901-40b9-9320-6e4b7926559f:p2]\u3011.",
+      "outcome": "complete"
+    }
+  ]
+}

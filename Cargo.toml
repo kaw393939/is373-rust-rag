@@ -1,0 +1,30 @@
+[package]
+name = "is373-rag"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+async-stream = "0.3"
+async-trait = "0.1"
+axum = { version = "0.8", features = ["multipart"] }
+base64 = "0.22"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
+hound = "3.5"
+tempfile = "3"
+futures-util = "0.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sqlite-vec = "=0.1.6"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io", "codec"] }
+tower-http = { version = "0.6", features = ["fs"] }
+
+uuid = { version = "1", features = ["v4"] }
+
+# Model fingerprinting reads a large speech model at startup; keep SHA-256 fast in student dev builds.
+[profile.dev.package.sha2]
+opt-level = 3

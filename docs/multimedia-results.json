@@ -1,0 +1,98 @@
+{
+  "models": {
+    "chat_and_vision": "gemma3:4b",
+    "speech": "whisper_cpp / ggml-base.bin"
+  },
+  "test_inputs": "Local UI screenshot and synthetic macOS speech; no mocked model inference",
+  "scope": "Targeted integration assertions passed. Extra image-answer claims are not certified; see verification.md.",
+  "results": [
+    {
+      "question": "What day and time is the workshop, and what should I bring?",
+      "mode": "chat",
+      "seconds": 111.65,
+      "answer": "Here\u2019s the information regarding the workshop:\n\n*   **Day:** Friday\n*   **Time:** 3:00 PM (3 in the afternoon)\n*   **What to Bring:** A blue notebook.\n\nThe access code is 749.",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "What color notebook did that recording mention?",
+      "mode": "chat",
+      "seconds": 6.57,
+      "answer": "The recording mentioned a blue notebook.",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "According to the attached recording, what day is the workshop? Cite the recording.",
+      "mode": "vector",
+      "seconds": 44.26,
+      "answer": "The workshop starts on Friday. [attachment-779cb260-dacf-4176-af8b-f38f230a547f:p1]",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "Read the brand name in the top left corner of this screenshot. Answer briefly.",
+      "mode": "chat",
+      "seconds": 78.06,
+      "answer": "The brand name in the top left corner of the screenshot is \u201cOrdo\u201d.\n\nThe image shows a screenshot of the Ordo workspace application, version Ordo Labs 3.2. It highlights the tagline \u201cA space for better thinking. A lot of possibility.\u201d and presents four key features: \u201cCreate something\u201d, \u201cExplore an idea\u201d, \u201cAsk your sources\u201d, and \u201cBuild with clarity\u201d.",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "Read the two large headline lines in that screenshot.",
+      "mode": "chat",
+      "seconds": 17.83,
+      "answer": "The two large headline lines in the screenshot are:\n\n*   \u201cA little curiosity.\u201d\n*   \u201cA lot of possibility.\u201d",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "What brand name appears in the screenshot? Cite the image source.",
+      "mode": "vector",
+      "seconds": 125.99,
+      "answer": "The brand name that appears in the screenshot is \u201cOrdo\u201d. [attachment-586bde63-5eec-45c2-85c1-99704308ba97:p1]",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "Transcribe this.",
+      "mode": "chat",
+      "seconds": 1.26,
+      "answer": "",
+      "terminal": {
+        "message": "Could not process broken.wav. Audio decoding failed; check the file and local model installation",
+        "outcome": "failed"
+      },
+      "model": "gemma3:4b"
+    },
+    {
+      "question": "What should I bring according to these voice notes?",
+      "mode": "chat",
+      "seconds": 32.81,
+      "answer": "Based on the provided voice notes, here\u2019s what you should bring to the workshop:\n\n*   A blue notebook.\n*   The access code: 749.\n\nThe voice notes are identical, indicating the same instructions in both.",
+      "terminal": {
+        "message": null,
+        "outcome": "complete"
+      },
+      "model": "gemma3:4b"
+    }
+  ]
+}

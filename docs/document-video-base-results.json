@@ -1,0 +1,94 @@
+[
+  {
+    "question": "What color notebook should I bring according to the PDF? Cite its page.",
+    "mode": "vector",
+    "answer": "Bring an orange notebook. [attachment-b2e62c0a-baf9-486d-94e4-b236a18316f2:p2]",
+    "terminal": {
+      "message": null,
+      "outcome": "complete"
+    },
+    "seconds": 14.22
+  },
+  {
+    "question": "Which room is on the first page of that PDF? Cite the page.",
+    "mode": "vector",
+    "answer": "Room: Cedar 204 [attachment-b2e62c0a-baf9-486d-94e4-b236a18316f2:p1]",
+    "terminal": {
+      "message": null,
+      "outcome": "complete"
+    },
+    "seconds": 16.44
+  },
+  {
+    "question": "Name the colors shown in the first and last sampled video frames, then give the access word spoken in the audio. Be concise.",
+    "mode": "chat",
+    "answer": "The colors shown in the first and last sampled video frames are red and green, respectively. The access word spoken in the audio is \u201cseater\u201d.",
+    "terminal": {
+      "message": null,
+      "outcome": "complete"
+    },
+    "seconds": 69.65,
+    "transcript": "The demo starts on Tuesday at 10 in the morning, the access word is \"seater.\"",
+    "speech_accuracy_pass": false
+  },
+  {
+    "question": "What color is visible in the middle sampled frame? Cite that frame.",
+    "mode": "vector",
+    "answer": "The middle sampled frame [attachment-fb861dcc-6dac-459c-95c8-0b67ec55d739:f2] shows a blue color.",
+    "terminal": {
+      "message": null,
+      "outcome": "complete"
+    },
+    "seconds": 90.86
+  },
+  {
+    "question": "What launch color is written on this scanned PDF page?",
+    "mode": "chat",
+    "answer": "According to the scanned PDF page, the launch color is purple.",
+    "terminal": {
+      "message": null,
+      "outcome": "complete"
+    },
+    "seconds": 26.8
+  },
+  {
+    "question": "Summarize this PDF.",
+    "mode": "chat",
+    "answer": "",
+    "terminal": {
+      "message": "Could not process locked.pdf. PDF inspection failed. The file may be corrupt, encrypted or unsupported.",
+      "outcome": "failed"
+    },
+    "seconds": 0.2
+  },
+  {
+    "question": "Summarize this PDF.",
+    "mode": "chat",
+    "answer": "",
+    "terminal": {
+      "message": "Could not process corrupt.pdf. PDF inspection failed. The file may be corrupt, encrypted or unsupported.",
+      "outcome": "failed"
+    },
+    "seconds": 0.35
+  },
+  {
+    "question": "Summarize this PDF.",
+    "mode": "chat",
+    "answer": "",
+    "terminal": {
+      "message": "Could not process too-many-pages.pdf. PDFs are limited to 20 pages. Split the document and try again.",
+      "outcome": "failed"
+    },
+    "seconds": 0.22
+  },
+  {
+    "question": "Summarize this PDF.",
+    "mode": "chat",
+    "answer": "",
+    "terminal": {
+      "message": "Could not process too-much-text.pdf. PDF text exceeds 16,000 characters. Split the document or upload a shorter excerpt.",
+      "outcome": "failed"
+    },
+    "seconds": 0.2
+  }
+]

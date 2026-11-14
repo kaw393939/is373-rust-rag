@@ -1,0 +1,42 @@
+[
+  {
+    "id": "committee",
+    "title": "Fictional Harbor Club committees",
+    "file": "committee.txt",
+    "origin": "https://github.com/kaw393939/is373-rag/blob/main/student-reference/fixtures/committee.txt",
+    "permission": "Synthetic teaching fixture from the user-owned course repository; reused for this requested local instructor example.",
+    "version": "Retrieved 2026-11-13; exact corpus content is SHA-256 fingerprinted at import."
+  },
+  {
+    "id": "conduct",
+    "title": "Fictional Harbor Club conduct",
+    "file": "conduct.txt",
+    "origin": "https://github.com/kaw393939/is373-rag/blob/main/student-reference/fixtures/conduct.txt",
+    "permission": "Synthetic teaching fixture from the user-owned course repository; reused for this requested local instructor example.",
+    "version": "Retrieved 2026-11-13; exact corpus content is SHA-256 fingerprinted at import."
+  },
+  {
+    "id": "contacts",
+    "title": "Fictional Harbor Club contacts",
+    "file": "contacts.txt",
+    "origin": "https://github.com/kaw393939/is373-rag/blob/main/student-reference/fixtures/contacts.txt",
+    "permission": "Synthetic teaching fixture from the user-owned course repository; reused for this requested local instructor example.",
+    "version": "Retrieved 2026-11-13; exact corpus content is SHA-256 fingerprinted at import."
+  },
+  {
+    "id": "events",
+    "title": "Fictional Harbor Club events",
+    "file": "events.txt",
+    "origin": "https://github.com/kaw393939/is373-rag/blob/main/student-reference/fixtures/events.txt",
+    "permission": "Synthetic teaching fixture from the user-owned course repository; reused for this requested local instructor example.",
+    "version": "Retrieved 2026-11-13; exact corpus content is SHA-256 fingerprinted at import."
+  },
+  {
+    "id": "membership",
+    "title": "Fictional Harbor Club membership",
+    "file": "membership.txt",
+    "origin": "https://github.com/kaw393939/is373-rag/blob/main/student-reference/fixtures/membership.txt",
+    "permission": "Synthetic teaching fixture from the user-owned course repository; reused for this requested local instructor example.",
+    "version": "Retrieved 2026-11-13; exact corpus content is SHA-256 fingerprinted at import."
+  }
+]
