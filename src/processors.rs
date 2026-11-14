@@ -14,7 +14,6 @@ pub const MAX_PDF_PAGES: usize = 20;
 pub const MAX_PDF_TEXT: usize = 16000;
 pub const MAX_SCAN_PAGES: usize = 4;
 pub const MAX_VIDEO_SECONDS: f64 = 120.0;
-pub const MAX_VISUAL_INPUTS: usize = 8;
 
 #[derive(Serialize)]
 pub struct ProcessorStatus {

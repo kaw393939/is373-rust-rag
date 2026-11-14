@@ -1,6 +1,6 @@
 # Ordo conversation workspace
 
-This is the reusable conversation layer on the Rust RAG server. It runs locally at http://127.0.0.1:3730. The UI is designed as a complete conversation product rather than a retrieval dashboard. It remains a single-user local application, not an authenticated public service.
+This is the reusable conversation layer on the Rust RAG server. It runs locally at http://127.0.0.1:3730. The UI is designed as a complete conversation product rather than a retrieval dashboard. The default local profile remains available; the separate production profile adds invitation accounts and private account storage. See [authentication](course/authentication.md), [conversational administration](course/control-plane.md) and [deployment](course/production.md).
 
 ## Working user flows
 
@@ -55,15 +55,15 @@ The shell uses same-origin `/api` calls. To reuse it with another Rust deploymen
 
 `conversation_id` is optional for compatibility with the original evaluation script. Without it, the response is ephemeral. Stored runs append user + assistant records before inference; stream events carry their IDs. The server saves bounded partial batches approximately every 250 ms when tokens arrive, plus terminal state. On disconnect, a drop guard saves partial text and marks the run interrupted. On server restart, stale streaming records become interrupted. A hard crash can lose text since the last committed batch. There is no automatic retry or SSE replay.
 
-Generation, embeddings, transcription, document extraction and video decoding have independent traits. Generation now accepts typed user/assistant history in addition to system instructions and the current prompt. The Ollama adapter owns vendor JSON and stream decoding. The Groq adapter maps text SSE into the same contract; other hosted adapters remain unimplemented.
+Generation, embeddings, transcription, document extraction and video decoding have independent traits. Generation now accepts typed user/assistant history in addition to system instructions and the current prompt. The Ollama adapter owns vendor JSON and stream decoding. The Groq adapter maps text/vision SSE into the same contract and its speech adapter returns normalized transcripts; other hosted adapters remain unimplemented.
 
 ## Operational scope
 
-The native service binds loopback. The container binds internally on all interfaces while Compose publishes only to host loopback. Requests with non-loopback Host headers or untrusted browser Origins are rejected; the Vite dev origin on port 5173 is allowed. UI responses disallow framing, use no-referrer and nosniff. These controls do not replace authentication. Trusted local processes can call the API.
+In `AUTH_MODE=local`, the native service binds loopback. The container binds internally on all interfaces while Compose publishes only to host loopback. Requests with non-loopback Host headers or untrusted browser Origins are rejected; the Vite dev origin on port 5173 is allowed. UI responses disallow framing, use no-referrer and nosniff. These controls do not replace authentication. Trusted local processes can call the API.
 
 One inference request runs at a time. Generation is capped at 2,048 tokens and provider calls at 300 seconds. Input questions are capped at 12,000 characters, attached/current context at 24,000 characters, and historical context at up to 12 complete messages within a character budget. Character budgets are a small local approximation, not exact tokenizer accounting. Ollama uses a 16,384-token context. Long discussions can fall outside retained model context while remaining in saved history.
 
-Before public/multi-user deployment: add identity, per-conversation/file authorization, CSRF/session policy, user quotas, paginated history, durable job/cancellation/replay APIs, storage lifecycle, backups, observability, deployment/HTTPS tests and provider-specific multimodal adapters. None of those are implied by the polished UI. This build makes the local experience reusable while preserving explicit boundaries.
+The production profile implements invitation identity, session/Origin policy, account-scoped data, quotas, hosted media adapters, backups and deployment gates. Still pending: paginated history, durable jobs/event replay, user-controlled deletion/retention, billing, MFA/SSO and high-availability operations. The default loopback profile remains intentionally simple.
 
 ## Verification
 

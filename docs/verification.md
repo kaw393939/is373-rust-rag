@@ -1,5 +1,8 @@
 # Verification · November 13–14, 2026
 
+This file preserves dated evidence from earlier local-only versions. Statements about missing cloud/auth/deployment features below describe those test runs. Current hosted architecture and checks are documented in [authentication](course/authentication.md), [control plane](course/control-plane.md) and [production](course/production.md).
+
+
 This is a chronological engineering record. Earlier sections describe earlier capability boundaries; the latest delivery section records the current implementation. Known model-quality failures remain preserved.
 
 ## Executed checks
@@ -102,3 +105,12 @@ The Docker image builds locally on ARM64. Its runtime smoke check passes non-roo
 The educational guide documents installation paths, practical hardware estimates, model roles/downloads, credentials, two ETL paths, request/event lifecycles, CI/CD, labs, evaluation and deployment boundaries. The setup configuration is tested for non-execution and owner-only file permissions. No production host or public multi-user service has been deployed.
 
 Final local checks: 16 Rust tests pass (plus the previously executed native-decoder test), 8 frontend tests pass, formatting and Clippy pass, the UI production build succeeds, 2 setup/configuration tests pass, all relative Markdown file links resolve, and Compose configuration validates. A separate real container test imported five sources/ten Nomic passages through host Ollama and streamed a supported $15 membership answer using Gemma.
+
+
+## Authenticated hosted profile and governed administration — 14 November 2026
+
+Added invite-only enrollment, Argon2id passwords, opaque revocable cookie sessions, per-account SQLite storage, capability policy, reviewed administrative commands, feature flags and audit receipts. The new deterministic integration script passed enrollment replay, Host/Origin/CSRF checks, cross-account conversations/files/derived assets, typed/unknown tool rejection, capability prompt parity, stale previews, execution replay, permission revocation, disable/reset and redacted audit checks. The browser also exercised sign-in and a natural-language feature-flag query through a reviewed command receipt.
+
+Live synthetic Groq checks passed against the separate authenticated test server: source-grounded $15 membership answer, local PDF page extraction/citations, scanned-page purple launch-color recognition, two sampled red/green video frames with the spoken access word cedar, persisted responses and a structured administrative plan. Early testing exposed typographic citation brackets and an account input allowance too small for three frames plus full context. Research output now normalizes citation bracket presentation while still validating exact evidence IDs; the hosted profile samples two frames. These findings are provider/model-quality evidence, not guarantees for arbitrary documents.
+
+The real FastEmbed image downloaded and checksum-verified its pinned model, loaded offline, produced normalized 384-dimensional vectors, and used about 152 MiB under a 320 MiB container limit. Rust formatting/Clippy, 16 unit tests, eight frontend tests, two setup tests and documentation-link checks passed locally; the normally ignored native decoder case remains separately covered by runtime image smoke tests. CI adds the credential-free auth test and native AMD64/ARM64 embedding-image checks. Public deployment is gated by the workflow's production job; consult its actual result and the [production runbook](course/production.md), rather than treating these local checks as deployment evidence.

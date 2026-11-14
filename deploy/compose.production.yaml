@@ -1,0 +1,82 @@
+name: ordo
+services:
+  app:
+    image: ${ORDO_IMAGE:?Set an immutable app image digest}
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    cpus: 0.65
+    pids_limit: 96
+    tmpfs: [/tmp:size=96m,mode=1777]
+    stop_grace_period: 25s
+    environment:
+      APP_ENV: production
+      AUTH_MODE: required
+      APP_ORIGIN: https://${ORDO_DOMAIN:?Set the hostname}
+      BIND_ADDRESS: 0.0.0.0
+      PORT: '3730'
+      DATABASE_PATH: /app/data/rag.sqlite
+      CHAT_PROVIDER: groq
+      CHAT_MODEL: openai/gpt-oss-20b
+      VISION_PROVIDER: groq
+      VISION_MODEL: qwen/qwen3.8-27b
+      TRANSCRIPTION_PROVIDER: groq
+      TRANSCRIPTION_MODEL: whisper-large-v3-turbo
+      GROQ_API_KEY_FILE: /run/secrets/groq-api-key
+      EMBEDDING_PROVIDER: fastembed
+      EMBEDDING_URL: http://embeddings:8080
+      ATTACHMENT_QUOTA_MB: '100'
+      VIDEO_SAMPLE_FRAMES: '2'
+      VISION_MAX_IMAGES: '2'
+    secrets: [groq-api-key]
+    volumes: [app-data:/app/data]
+    networks: [web, private]
+    depends_on:
+      embeddings:
+        condition: service_healthy
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: web
+      traefik.http.routers.ordo.rule: Host(`${ORDO_DOMAIN}`)
+      traefik.http.routers.ordo.entrypoints: websecure
+      traefik.http.routers.ordo.tls.certresolver: letsencrypt
+      traefik.http.services.ordo.loadbalancer.server.port: '3730'
+    logging: {driver: json-file, options: {max-size: 10m, max-file: '3'}}
+  embeddings:
+    image: ${ORDO_EMBEDDING_IMAGE:?Set an immutable embedding image digest}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 320m
+    cpus: 0.5
+    pids_limit: 48
+    tmpfs: [/tmp:size=16m,mode=1777]
+    volumes: [model-cache:/models:ro]
+    networks: [private]
+    logging: {driver: json-file, options: {max-size: 5m, max-file: '2'}}
+  model-download:
+    profiles: [setup]
+    image: ${ORDO_EMBEDDING_IMAGE:?Set an immutable embedding image digest}
+    command: [download]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    volumes: [model-cache:/models]
+    networks: [download]
+volumes:
+  app-data:
+  model-cache:
+networks:
+  web:
+    external: true
+  private:
+    internal: true
+  download: {}
+secrets:
+  groq-api-key:
+    file: ./secrets/groq-api-key

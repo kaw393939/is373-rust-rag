@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily Ordo backup
+[Timer]
+OnCalendar=*-*-* 04:40:00 America/New_York
+Persistent=true
+RandomizedDelaySec=120
+[Install]
+WantedBy=timers.target

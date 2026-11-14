@@ -18,7 +18,7 @@ Start with text PDFs only and test source attribution end to end. Add scanned-pa
 
 ## Build toward public operation
 
-Implement identity and per-user ownership before opening network access. Every conversation, original file and generated asset route needs authorization, including range/download requests. Add per-user quotas and retention/deletion semantics. Separate long media processing from request workers and define durable run/event APIs if clients must reconnect and replay.
+The hosted profile now provides identity, private account databases, range/asset authorization and quotas; study [authentication](authentication.md) before changing these boundaries. Next add explicit retention/deletion semantics. Separate long media processing from request workers and define durable run/event APIs if clients must reconnect and replay.
 
 Then test HTTPS/reverse-proxy streaming, request limits, session/CSRF policy, model egress, backup/restore and deployment rollback. The current single-request semaphore is deliberately simple; replacing it requires measuring memory pressure and queue behavior under load. Add observability with redacted structured logs and identifiers, not full prompts or credentials by default.
 

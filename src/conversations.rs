@@ -3,13 +3,23 @@ use crate::{ApiError, App, internal, store};
 use anyhow::{Result, bail};
 use axum::{
     Json,
-    extract::{Multipart, Path, State},
+    extract::{Extension, Multipart, Path},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+pub fn storage_limit() -> usize {
+    std::env::var("ATTACHMENT_QUOTA_MB")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(500)
+        .clamp(24, 500)
+        * 1024
+        * 1024
+}
 
 pub fn now() -> u64 {
     std::time::SystemTime::now()
@@ -102,10 +112,17 @@ pub fn load(path: &str, id: &str) -> Result<Conversation> {
     Ok(serde_json::from_str(&raw)?)
 }
 fn insert(path: &str, c: &Conversation) -> Result<()> {
-    open(path)?.execute(
+    let mut db = open(path)?;
+    let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    let count: i64 = tx.query_row("SELECT count(*) FROM conversations", [], |r| r.get(0))?;
+    if count >= 500 {
+        anyhow::bail!("Conversation limit reached (500)");
+    }
+    tx.execute(
         "INSERT INTO conversations VALUES (?1,?2)",
         params![c.id, serde_json::to_string(c)?],
     )?;
+    tx.commit()?;
     Ok(())
 }
 pub fn update(path: &str, id: &str, f: impl FnOnce(&mut Conversation)) -> Result<()> {
@@ -124,7 +141,7 @@ pub fn update(path: &str, id: &str, f: impl FnOnce(&mut Conversation)) -> Result
     tx.commit()?;
     Ok(())
 }
-pub async fn list(State(app): State<App>) -> Result<Json<Value>, ApiError> {
+pub async fn list(Extension(app): Extension<App>) -> Result<Json<Value>, ApiError> {
     let db = open(&app.db).map_err(internal)?;
     let mut stmt = db
         .prepare("SELECT value FROM conversations")
@@ -141,7 +158,7 @@ pub async fn list(State(app): State<App>) -> Result<Json<Value>, ApiError> {
     result.sort_by_key(|v| std::cmp::Reverse(v["updated"].as_u64().unwrap_or(0)));
     Ok(Json(json!(result)))
 }
-pub async fn create(State(app): State<App>) -> Result<Json<Conversation>, ApiError> {
+pub async fn create(Extension(app): Extension<App>) -> Result<Json<Conversation>, ApiError> {
     let c = Conversation {
         id: id(),
         title: "New conversation".into(),
@@ -155,7 +172,7 @@ pub async fn create(State(app): State<App>) -> Result<Json<Conversation>, ApiErr
     Ok(Json(c))
 }
 pub async fn get(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     Path(id): Path<String>,
 ) -> Result<Json<Conversation>, ApiError> {
     Ok(Json(load(&app.db, &id).map_err(|_| {
@@ -169,7 +186,7 @@ pub struct Patch {
     archived: Option<bool>,
 }
 pub async fn patch(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     Path(id): Path<String>,
     Json(p): Json<Patch>,
 ) -> Result<Json<Value>, ApiError> {
@@ -201,7 +218,7 @@ pub struct Fork {
     before: String,
 }
 pub async fn fork(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     Path(id): Path<String>,
     Json(f): Json<Fork>,
 ) -> Result<Json<Conversation>, ApiError> {
@@ -344,7 +361,7 @@ fn media_type(name: &str, bytes: &[u8]) -> Result<&'static str> {
     )
 }
 pub async fn upload(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     mut multipart: Multipart,
 ) -> Result<Json<Attachment>, ApiError> {
     let field = multipart
@@ -401,10 +418,10 @@ pub async fn upload(
             |r| r.get(0),
         )
         .map_err(internal)?;
-    if used + bytes.len() as i64 > 500 * 1024 * 1024 {
+    if used + bytes.len() as i64 > storage_limit() as i64 {
         return Err(ApiError(
             StatusCode::INSUFFICIENT_STORAGE,
-            "Local attachment storage has reached 500 MB.".into(),
+            "Your attachment storage limit has been reached.".into(),
         ));
     }
     tx.execute(
@@ -438,8 +455,8 @@ pub fn save_processed(path: &str, meta: &Attachment, assets: &[(String, Vec<u8>)
     let mut db = open(path)?;
     let tx = db.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
     let used:usize=tx.query_row("SELECT (SELECT COALESCE(SUM(length(data)),0) FROM attachments) + (SELECT COALESCE(SUM(length(data)),0) FROM media_assets)",[],|r|r.get(0))?;
-    if used + assets.iter().map(|(_, bytes)| bytes.len()).sum::<usize>() > 500 * 1024 * 1024 {
-        bail!("Local attachment and processed-media storage has reached 500 MB");
+    if used + assets.iter().map(|(_, bytes)| bytes.len()).sum::<usize>() > storage_limit() {
+        bail!("Your attachment and processed-media storage limit has been reached");
     }
     for (id, bytes) in assets {
         tx.execute(
@@ -462,7 +479,7 @@ pub fn asset(path: &str, attachment_id: &str, asset_id: &str) -> Result<Vec<u8>>
     )?)
 }
 pub async fn download_asset(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     Path((parent, id)): Path<(String, String)>,
 ) -> Result<Response, ApiError> {
     let bytes = asset(&app.db, &parent, &id)
@@ -502,7 +519,7 @@ fn range(value: &str, len: usize) -> Option<(usize, usize)> {
     }
 }
 pub async fn download(
-    State(app): State<App>,
+    Extension(app): Extension<App>,
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response, ApiError> {

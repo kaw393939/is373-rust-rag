@@ -35,11 +35,12 @@ flowchart LR
   C --> E[Publish architecture images on trusted pushes]
   D --> E
   E --> F[Combine tested architectures into release tags]
+  F --> G[Main only: restricted SSH deployment and HTTPS/auth gates]
 ```
 
 Read [ci.yml](../../.github/workflows/ci.yml). Pull requests run checks and image smoke tests without publishing. Trusted pushes to `main`, version tags and manual runs also publish. Both native image jobs must pass before the shared manifest is updated. Each image includes source/revision labels, provenance and an SBOM (a software component inventory). These improve traceability; they are not a security certification.
 
-`scripts/check_container.py` starts its own disposable container, checks non-root execution and native tools, then exercises real PDF extraction, video sampling, stored JPEG access and browser Origin handling with a mapped port. It deliberately has no model/key: the expected generation outcome is unavailable. Real inference is evaluated separately. CI does not download gigabytes of weights or consume an instructor's hosted key.
+`scripts/check_container.py` starts its own disposable container, checks non-root execution and native tools, then exercises real PDF extraction, video sampling, stored JPEG access and browser Origin handling with a mapped port. It deliberately has no model/key: the expected generation outcome is unavailable. Real inference is evaluated separately. The separate embedding smoke test downloads about 67 MB of pinned weights and tests real normalized vectors under the production memory cap. CI does not download generation weights or consume an instructor's hosted key.
 
 ## Publish from your fork
 
@@ -47,7 +48,7 @@ Create your own Docker Hub repository. In GitHub repository Settings → Secrets
 
 The image name in this workflow is `<username>/is373-rust-rag`; update it if your repository uses a different name. GitHub does not copy secrets to a fork. Never place the token in YAML, build arguments, issues or logs. See [Docker token documentation](https://docs.docker.com/security/access-tokens/personal-access-tokens/) for current account controls.
 
-To release, start from a reviewed commit whose checks pass, tag it with a new version such as `v0.1.0`, and push that tag. Watch every job in Actions and inspect the registry digest before declaring publication successful. A running workflow is not a completed release. CI publishes deployable artifacts; this repository does not automatically deploy a remote production host.
+To release, start from a reviewed commit whose checks pass, tag it with a new version such as `v0.1.0`, and push that tag. Watch every job in Actions and inspect the registry digest before declaring publication successful. A running workflow is not a completed release. Successful main-branch publication also deploys the two tested image digests through a restricted SSH command; version tags publish without deploying. See the [production runbook](production.md) for required secrets, immutable releases and gates.
 
 ## Deployment, backup and rollback
 
@@ -55,4 +56,4 @@ Keep a previous image digest and a consistent database backup before upgrades. S
 
 Rollback means selecting the earlier digest, pulling it and recreating the app container against a compatible volume. Model configuration and data are separate from the image, so changing an image alone does not necessarily roll back a model or imported corpus.
 
-For a single-user remote machine, an SSH tunnel can preserve the loopback boundary. A public production service additionally needs identity, per-user file/conversation authorization, HTTPS, a reviewed reverse-proxy Host/Origin policy, quotas, retention, monitoring, backups and tested upgrades. Do not simply remove Host checks or publish port 3730 on all interfaces. See [extensions](extensions.md) for the implementation sequence.
+The default local profile can also be reached through a private SSH tunnel. The separate authenticated production profile provides identity, private account storage, HTTPS integration, quotas, reviewed admin commands and scoped backup/release operators. Follow the [production runbook](production.md), including its remaining retention, monitoring and recovery limitations. Do not publish port 3730 directly or disable Host/Origin checks.

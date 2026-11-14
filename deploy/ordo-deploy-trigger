@@ -1,0 +1,3 @@
+#!/bin/sh
+# Forced SSH command: ignores SSH_ORIGINAL_COMMAND and accepts only a release JSON on stdin.
+exec sudo -n /usr/local/sbin/ordo-release

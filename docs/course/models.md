@@ -24,11 +24,11 @@ For a smaller speech model, use `WHISPER_VARIANT=base` with the download script 
 
 ## Groq setup and data flow
 
-Select Groq through `scripts/setup.py`, or set the server environment explicitly. The adapter sends requests only to `https://api.groq.com/openai/v1`. It implements text streaming and checks that the configured model is available to the account. It does not implement Groq vision, embeddings or speech APIs.
+Select Groq through `scripts/setup.py`, or set the server environment explicitly. The adapter sends requests only to `https://api.groq.com/openai/v1`. It implements text streaming and vision generation through independent `Generator` instances, plus audio transcription through `Transcriber`. Text/vision readiness checks model access. Groq embeddings are not implemented. The interactive local setup keeps local vision/speech unless you select the separate production profile.
 
 The name `openai/gpt-oss-20b` identifies an open-weight model served by Groq. This path uses a **Groq** key and Groq's service; it is not an OpenAI Platform integration. Check the [current Groq model list](https://console.groq.com/docs/models) before changing models. Availability, account limits and prices can change; the application does not assume unlimited free usage.
 
-Text-only turns may send questions, bounded history, retrieved passages, PDF text and audio transcripts to Groq. Turns containing actual images, scan pages or sampled video frames select the independently configured vision generator, which remains local here. A later hosted vision adapter would change that data destination. The UI's privacy labels derive from adapter locality rather than a hardcoded local-only promise.
+Text-only turns may send questions, bounded history, retrieved passages, PDF text and audio transcripts to Groq. Turns containing actual images, scan pages or sampled video frames select the independently configured vision generator, which is local in the default profile and Groq in the hosted production profile. Normalized audio goes to the configured local or Groq transcriber. The UI's privacy labels derive from adapter locality rather than a hardcoded local-only promise.
 
 ## Keys are runtime configuration
 
@@ -38,7 +38,7 @@ The setup assistant uses a hidden prompt and a private ignored configuration fil
 
 For production, install a credential file on the target host with appropriate ownership and restrictive permissions, mount it read-only and set `GROQ_API_KEY_FILE` to the container path. A bind-mounted file must be readable by the image's non-root UID 10001. Do not solve a permission error by making the key world-readable. A secret manager or deployment platform can handle this more cleanly than a manually copied file.
 
-Creating a Docker image or saving a key locally does not deploy that key to a remote host. Decide the target host, identity, access policy, backup/rotation procedure and network exposure before a production rollout. The current application remains a single-user reference.
+Creating a Docker image or saving a key locally does not deploy that key to a remote host. Decide the target host, identity, access policy, backup/rotation procedure and network exposure before a production rollout. The [production guide](production.md) documents the authenticated deployment, secret mount and rotation process.
 
 ## Changing models safely
 
@@ -47,3 +47,15 @@ Change one role at a time and keep a baseline result. A generation-model change 
 The application does not silently fall back from local to cloud or retry partial generation with another provider. Such a fallback could change cost, privacy and the meaning of a saved answer. Surface the failure and make the provider decision explicit.
 
 Primary references: [Ollama API](https://docs.ollama.com/api), [Groq compatibility](https://console.groq.com/docs/openai), [Groq GPT-OSS 20B](https://console.groq.com/docs/model/openai/gpt-oss-20b), [whisper.cpp](https://github.com/ggml-org/whisper.cpp).
+
+## Small-host hosted profile
+
+[compose.production.yaml](../../deploy/compose.production.yaml) explicitly selects Groq for text (`openai/gpt-oss-20b`), vision (`qwen/qwen3.8-27b`) and speech (`whisper-large-v3-turbo`). `GROQ_API_KEY_FILE` supplies the shared runtime credential. No hosted-role selection silently changes the default local profile.
+
+`EMBEDDING_PROVIDER=fastembed` and `EMBEDDING_URL=http://embeddings:8080` select the private CPU sidecar. FastEmbed 0.9.1 loads BAAI/bge-small-en-v1.5, a quantized 384-dimensional English model. Its ONNX weights are about 67 MB. The downloader pins a Hugging Face commit and verifies every model/tokenizer file against [model-lock.json](../../deploy/embeddings/model-lock.json). Its identity includes the complete file-lock hash and runtime version, so changed artifacts invalidate the index. Inference runs offline with one CPU thread and one batch item at a time. The image contains Python dependencies; model weights live in a volume.
+
+Use `docker compose --profile setup run --rm model-download`, then start the embedding service and run the app's `import` command. Changing from Nomic to BGE requires re-import because the dimensions and embedding space differ. Never mix old vectors with a new query embedder.
+
+Qwen supports three images at the API level, but account input-token limits apply to the entire request. The production profile limits visual context to two images and samples two video frames; this also bounds scanned-page inputs. Long PDFs or transcripts may still exceed a free hosted account allowance. The app reports size/rate failures and keeps the original inputs inspectable. It does not retry partial answers with another provider.
+
+Sources: [FastEmbed supported models](https://qdrant.github.io/fastembed/examples/Supported_Models/), [Groq vision](https://console.groq.com/docs/vision), [Groq speech](https://console.groq.com/docs/speech-to-text).

@@ -15,6 +15,9 @@ use tokio::process::Command;
 
 pub fn configured() -> Result<Arc<dyn Transcriber>> {
     let provider = std::env::var("TRANSCRIPTION_PROVIDER").unwrap_or_else(|_| "whisper_cpp".into());
+    if provider == "groq" {
+        return Ok(Arc::new(crate::groq_speech::GroqSpeech::configured()?));
+    }
     if provider != "whisper_cpp" {
         bail!("TRANSCRIPTION_PROVIDER={provider}: adapter not installed");
     }
@@ -70,6 +73,54 @@ fn audio_measurements(path: &Path) -> Result<f64> {
     Ok(duration)
 }
 
+pub async fn normalize(
+    bytes: Vec<u8>,
+    mime: &str,
+    ffmpeg: &str,
+) -> Result<(tempfile::TempDir, PathBuf, f64)> {
+    if !matches!(
+        mime,
+        "audio/wav" | "audio/mpeg" | "audio/ogg" | "audio/mp4" | "audio/webm" | "audio/flac"
+    ) {
+        bail!("Unsupported audio format");
+    }
+    let temp = tempfile::Builder::new().prefix("ordo-speech-").tempdir()?;
+    let input = temp.path().join("input.media");
+    let wav = temp.path().join("speech.wav");
+    tokio::fs::write(&input, bytes).await?;
+    let mut convert = Command::new(ffmpeg);
+    convert
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-protocol_whitelist",
+            "file,pipe",
+            "-i",
+        ])
+        .arg(&input)
+        .args([
+            "-map",
+            "0:a:0",
+            "-vn",
+            "-t",
+            "121",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            "-c:a",
+            "pcm_s16le",
+            "-y",
+        ])
+        .arg(&wav);
+    run(convert, 30, "Audio decoding").await?;
+    let measure_path = wav.clone();
+    let duration = tokio::task::spawn_blocking(move || audio_measurements(&measure_path)).await??;
+    Ok((temp, wav, duration))
+}
+
 #[async_trait]
 impl Transcriber for Whisper {
     fn is_local(&self) -> bool {
@@ -91,48 +142,8 @@ impl Transcriber for Whisper {
         if !status.ready {
             bail!("{}", status.message.unwrap_or_default());
         }
-        if !matches!(
-            mime,
-            "audio/wav" | "audio/mpeg" | "audio/ogg" | "audio/mp4" | "audio/webm" | "audio/flac"
-        ) {
-            bail!("Unsupported audio format");
-        }
-        let temp = tempfile::Builder::new().prefix("ordo-speech-").tempdir()?;
-        let input = temp.path().join("input.media");
-        let wav = temp.path().join("speech.wav");
+        let (temp, wav, duration) = normalize(bytes, mime, &self.ffmpeg).await?;
         let output = temp.path().join("transcript");
-        tokio::fs::write(&input, bytes).await?;
-        let mut convert = Command::new(&self.ffmpeg);
-        convert
-            .args([
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-nostdin",
-                "-protocol_whitelist",
-                "file,pipe",
-                "-i",
-            ])
-            .arg(&input)
-            .args([
-                "-map",
-                "0:a:0",
-                "-vn",
-                "-t",
-                "121",
-                "-ar",
-                "16000",
-                "-ac",
-                "1",
-                "-c:a",
-                "pcm_s16le",
-                "-y",
-            ])
-            .arg(&wav);
-        run(convert, 30, "Audio decoding").await?;
-        let measure_path = wav.clone();
-        let duration =
-            tokio::task::spawn_blocking(move || audio_measurements(&measure_path)).await??;
         let mut whisper = Command::new(&self.cli);
         whisper
             .arg("-m")

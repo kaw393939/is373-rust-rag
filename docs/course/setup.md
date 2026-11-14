@@ -8,9 +8,10 @@ Run commands from the repository root unless a step says otherwise. Start with a
 | --- | --- | --- | --- |
 | Native + local | Rust, UI, SQLite, Ollama, media tools and models | Nothing | Apple Silicon with native Ollama GPU support |
 | Docker + local | App container, persistent volumes, and host or container Ollama | Nothing | Reproducible app environment on Linux/macOS/WSL2 |
+| Hosted production | Rust app, local PDF/video extraction, small CPU embeddings | Text, selected images and normalized audio → Groq | Invite-only small-server deployment; see [production](production.md) |
 | Native/Docker + Groq | App, SQLite, local embeddings, optional local vision/speech | Text, retrieved passages, PDF text and transcripts used by text-only turns | Faster text generation or a smaller optional-media setup |
 
-Groq does not replace the embedding service in this implementation. Even the hosted-text path uses local Nomic embeddings for Research mode. Turns containing images select the independent local vision generator. `--skip-media` skips optional Whisper/vision downloads; it does not invent those capabilities or remove models already installed.
+The following interactive laptop setup uses Nomic and optional local media; the separate production Compose profile uses BGE CPU embeddings and hosted media models. Groq does not replace the embedding service in this implementation. Even the hosted-text path uses local Nomic embeddings for Research mode. Turns containing images select the independent local vision generator. `--skip-media` skips optional Whisper/vision downloads; it does not invent those capabilities or remove models already installed.
 
 ## Hardware and software
 

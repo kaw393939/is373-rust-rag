@@ -63,6 +63,6 @@ The server's concrete adapters currently map non-success finish reasons to incom
 
 The UI should not know Ollama's `images` field or Groq's `choices` shape. A PDF decoder should not choose the generation provider. An embedding adapter should not know the chat layout. A stored transcript should retain its model provenance when the current model setting changes.
 
-Documents, transcripts and images are untrusted evidence. Instructions embedded in them are not user authorization. The app does not execute model-suggested tools. The local Host/Origin boundary is useful for this single-user workspace, but it does not replace identity and per-resource authorization for a hosted multi-user application.
+Documents, transcripts and images are untrusted evidence. Instructions embedded in them are not user authorization. Normal chat has no tool-execution channel. The separate administration workspace validates typed model proposals and requires a reviewed command through the capability policy; see [control plane](control-plane.md). The hosted profile uses [session identity and account-scoped storage](authentication.md) in addition to Host/Origin checks.
 
 For exact routes and operational limits, read [chat-platform.md](../chat-platform.md). For current implementation evidence and remaining model-quality limitations, read [verification.md](../verification.md).

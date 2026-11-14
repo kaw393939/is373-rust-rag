@@ -51,6 +51,15 @@ pub fn open(path: &str) -> Result<Connection> {
     });
     let db = Connection::open(path)?;
     db.busy_timeout(std::time::Duration::from_secs(5))?;
+    if std::path::Path::new(path)
+        .parent()
+        .and_then(|p| p.file_name())
+        .is_some_and(|n| n == "users")
+    {
+        // Hard per-account database bound (128 MiB at the normal 4 KiB page size).
+        let page_size: i64 = db.query_row("PRAGMA page_size", [], |r| r.get(0))?;
+        db.pragma_update(None, "max_page_count", 128 * 1024 * 1024 / page_size)?;
+    }
     db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS metadata (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS chunks (rowid INTEGER PRIMARY KEY, value TEXT NOT NULL);")?;

@@ -2,7 +2,7 @@
 
 This is a working instructor reference for a local RAG application with a Rust server and the Ordo chat interface. It demonstrates the complete path from permitted source material to stored representations, retrieved evidence, streamed model output and a saved conversation. It also demonstrates local PDF, image, audio and sampled-video processing.
 
-The [official individual RAG brief](https://github.com/kaw393939/is373-studio/blob/main/docs/projects/individual.md) and Canvas remain authoritative. This guide adds no assignment, due date, required language, paid service or grading rule. Students can transfer the same ideas to their existing stack. The local app alone does not meet the brief's later hosted-operation requirement.
+The [official individual RAG brief](https://github.com/kaw393939/is373-studio/blob/main/docs/projects/individual.md) and Canvas remain authoritative. This guide adds no assignment, due date, required language, paid service or grading rule. Students can transfer the same ideas to their existing stack. The guide now includes a separate authenticated hosted deployment; your own project requirements still come from the official brief.
 
 ## Start with the path that matches your goal
 
@@ -14,6 +14,9 @@ The [official individual RAG brief](https://github.com/kaw393939/is373-studio/bl
 | Understand the ETL pipelines and storage | [ETL and data lineage](etl.md) |
 | Install models or configure a Groq API key | [Models, providers and credentials](models.md) |
 | Understand Docker and the release process | [Containers and CI/CD](delivery.md) |
+| Understand accounts and private data | [Authentication and authorization](authentication.md) |
+| Build conversational administration | [Tool registry, prompts and feature flags](control-plane.md) |
+| Deploy and operate a hosted instance | [Production deployment and recovery](production.md) |
 | Learn through bounded experiments | [Guided labs](labs.md) |
 | Decide whether an answer is supported | [Evaluation](evaluation.md) |
 | Build an extension without coupling everything | [Extension guide](extensions.md) |
@@ -28,9 +31,9 @@ You do not need to memorize the repository. Use the module map and follow the da
 
 ## What works and what remains an extension
 
-Working: local text/vision generation, independent speech recognition, real vector search, keyword comparison, persistent chat, source cards, cancellation, PDF text/scanned pages, sampled video frames, transcripts and a Groq text adapter. The app has separate interfaces for generation, embedding, transcription, document extraction and video decoding.
+Working: local text/vision generation, independent speech recognition, real vector search, keyword comparison, persistent chat, source cards, cancellation, PDF text/scanned pages, sampled video frames, transcripts, Groq text/vision/speech adapters, and local CPU embeddings. The hosted profile adds invitation-only accounts, private account storage and governed administration. The app has separate interfaces for generation, embedding, transcription, document extraction and video decoding.
 
-Scope boundaries: one local user and one inference request at a time; no account login or per-user file authorization; no durable background ingestion queue, scheduled source synchronization or automatic promotion of chat uploads into the vector library. Cloud vision/transcription and OpenAI/Anthropic/DeepSeek adapters are future work. Docker packaging and publishing do not by themselves make the application a secure public multi-user service.
+Scope boundaries: one inference request at a time; no durable ingestion queue, scheduled synchronization or automatic promotion of chat uploads into the shared library. OpenAI/Anthropic/DeepSeek remain future adapters. Billing, organizations, MFA/SSO and automated retention/deletion are backlog items. Published images and deployment checks provide evidence for the specific tested profile, not an enterprise security or uptime guarantee.
 
 ## A useful learning sequence
 
@@ -40,6 +43,7 @@ Scope boundaries: one local user and one inference request at a time; no account
 4. Observe SSE events, a normal completion and an interrupted response.
 5. Add multimedia, inspect the exact extracted inputs, and check the answer against them.
 6. Change one bounded design choice and preserve both the earlier and later results.
-7. Follow a commit through CI to a Docker image, then run that exact image digest.
+7. Follow a commit through CI to tested images, deployment gates and a backup.
+8. Trace an invitation, a denied cross-account request and a reviewed administrative command.
 
 Use your existing project record or issue workflow for observations and peer feedback. The [experiment template](experiment-template.md) is optional scaffolding, not another required report.

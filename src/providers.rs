@@ -27,6 +27,15 @@ pub struct ImageInput {
 }
 
 #[derive(Debug)]
+pub struct ProviderFailure(pub String);
+impl std::fmt::Display for ProviderFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+impl std::error::Error for ProviderFailure {}
+
+#[derive(Debug)]
 pub struct NoSpeech;
 impl std::fmt::Display for NoSpeech {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -97,6 +106,9 @@ pub trait Embedder: Send + Sync {
 
 #[async_trait]
 pub trait Generator: Send + Sync {
+    fn max_images(&self) -> usize {
+        8
+    }
     fn is_local(&self) -> bool {
         false
     }
@@ -118,12 +130,6 @@ pub struct Providers {
 }
 
 pub fn configured() -> Result<Providers> {
-    for key in ["EMBEDDING_PROVIDER", "VISION_PROVIDER"] {
-        let value = std::env::var(key).unwrap_or_else(|_| "ollama".into());
-        if value != "ollama" {
-            bail!("{key}={value}: adapter not installed; see docs/providers.md");
-        }
-    }
     let chat_provider = std::env::var("CHAT_PROVIDER").unwrap_or_else(|_| "ollama".into());
     let base = std::env::var("OLLAMA_URL").unwrap_or_else(|_| "http://127.0.0.1:11434".into());
     let url = reqwest::Url::parse(&base)?;
@@ -153,9 +159,23 @@ pub fn configured() -> Result<Providers> {
         _ => bail!("CHAT_PROVIDER={chat_provider}: adapter not installed; use ollama or groq"),
     };
     Ok(Providers {
-        embedder: Arc::new(make("EMBEDDING_MODEL", "nomic-embed-text:latest")),
+        embedder: match std::env::var("EMBEDDING_PROVIDER")
+            .unwrap_or_else(|_| "ollama".into())
+            .as_str()
+        {
+            "ollama" => Arc::new(make("EMBEDDING_MODEL", "nomic-embed-text:latest")),
+            "fastembed" => Arc::new(crate::embeddings::FastEmbed::configured(client.clone())?),
+            _ => bail!("Unsupported embedding provider"),
+        },
         generator,
-        vision: Arc::new(make("VISION_MODEL", "gemma3:4b")),
+        vision: match std::env::var("VISION_PROVIDER")
+            .unwrap_or_else(|_| "ollama".into())
+            .as_str()
+        {
+            "ollama" => Arc::new(make("VISION_MODEL", "gemma3:4b")),
+            "groq" => Arc::new(crate::groq::Groq::for_role(client.clone(), true)?),
+            _ => bail!("Unsupported vision provider"),
+        },
     })
 }
 

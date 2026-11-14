@@ -8,7 +8,7 @@
 
 A polished Svelte conversation interface and Rust/Axum backend: persistent chat history, rich streamed responses, multimedia messages, and optional source-grounded RAG. Open **http://127.0.0.1:3730** after starting the server.
 
-Text generation, vision, speech transcription and embeddings use independent provider interfaces. Ollama, whisper.cpp and optional Groq text generation are implemented; OpenAI, Anthropic and DeepSeek adapters can be added later. The frontend consumes a stable application API rather than vendor-specific streams.
+Text generation, vision, speech transcription and embeddings use independent provider interfaces. Ollama, whisper.cpp, Groq text/vision/transcription and a local CPU embedding service are implemented; OpenAI, Anthropic and DeepSeek adapters can be added later. The frontend consumes a stable application API rather than vendor-specific streams.
 
 ## Guided setup
 
@@ -23,7 +23,7 @@ The assistant chooses local or Groq text generation and native or Docker executi
 
 ## Manual native setup
 
-Prerequisites: Rust/Cargo (tested 1.94), Node.js 22.22+, and [Ollama](https://ollama.com/). For multimedia, install FFmpeg, whisper.cpp and Poppler (`brew install ffmpeg whisper-cpp poppler` on macOS; official whisper.cpp build instructions are linked below). Gemma 3, Nomic embeddings and Whisper small occupy roughly 4.2 GB on disk. Downloads need internet; the default local configuration keeps inference and storage on your machine afterward. Selecting Groq sends text context to that service; see [models and data flow](docs/course/models.md).
+Prerequisites: Rust/Cargo (tested 1.94), Node.js 22.22+, and [Ollama](https://ollama.com/). For multimedia, install FFmpeg, whisper.cpp and Poppler (`brew install ffmpeg whisper-cpp poppler` on macOS; official whisper.cpp build instructions are linked below). Gemma 3, Nomic embeddings and Whisper small occupy roughly 4.2 GB on disk. Downloads need internet; the default local configuration keeps inference and storage on your machine afterward. Selecting hosted roles sends their relevant text, images or normalized audio to that service; see [models and data flow](docs/course/models.md).
 
 ```sh
 # Start only if Ollama is not already running:
@@ -103,7 +103,9 @@ python3 scripts/evaluate.py
 
 ## Deployment boundary
 
-This is a working **single-user local app**, not a publicly deployed multi-user service. It binds loopback and rejects untrusted browser Origins/Host headers. It has no account authentication, per-user authorization, event replay or attachment garbage collection. CI tests and publishes containers; it does not deploy a public production host. Further operational work is required before a public production launch; see the [platform notes](docs/chat-platform.md).
+The default profile is loopback-only and needs no account. The production profile adds invite-only accounts, private per-account conversations/files, revocable sessions, capability checks and a reviewed conversational administration workspace. It runs at [ordo.keithwilliams.org](https://ordo.keithwilliams.org) with Groq text, vision and speech, plus small local CPU embeddings. See [authentication](docs/course/authentication.md), [the internal tool registry and feature flags](docs/course/control-plane.md), and [DigitalOcean deployment, CI/CD, backups and recovery](docs/course/production.md).
+
+This is a bounded class-sized hosted MVP: one inference at a time, provider/account quotas, no billing, organizations, MFA/SSO, automatic retention/deletion, durable background jobs or high availability. The production profile is separate from the default local setup. The existing [Ordo architecture repository](https://github.com/kaw393939/ordo) remains the broader product design reference.
 
 Limits: one inference at a time, four attachments/message, eight visual inputs in active context (images, scan pages and video frames), PDFs up to 20 pages / 16,000 extracted characters, 20 megapixels/image (resized to 1536 px), two minutes/audio or video, 12 MB/media file, 24 KB/text file, 500 MB total attachments, 12,000 characters/question, bounded history, 2,048 output tokens and 300-second generation/compound-processing timeouts. Archives retain data. The UI clearly reports incomplete/interrupted generation. No model answer is treated as an authorized action.
 

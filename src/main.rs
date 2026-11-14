@@ -1,5 +1,9 @@
+mod auth;
+mod control;
 mod conversations;
+mod embeddings;
 mod groq;
+mod groq_speech;
 mod local_process;
 mod media;
 mod processors;
@@ -10,7 +14,7 @@ mod store;
 use anyhow::Result;
 use axum::{
     Json, Router,
-    extract::{DefaultBodyLimit, State},
+    extract::{DefaultBodyLimit, Extension},
     http::StatusCode,
     response::{
         IntoResponse, Response,
@@ -28,6 +32,9 @@ use tokio::sync::Semaphore;
 #[derive(Clone)]
 struct App {
     db: String,
+    library_db: String,
+    auth: Arc<auth::Auth>,
+    user: Option<auth::User>,
     embedder: Arc<dyn Embedder>,
     generator: Arc<dyn Generator>,
     vision: Arc<dyn Generator>,
@@ -43,7 +50,7 @@ impl IntoResponse for ApiError {
 }
 fn internal(error: impl std::fmt::Display) -> ApiError {
     eprintln!("{error}");
-    ApiError(StatusCode::SERVICE_UNAVAILABLE,"Local service unavailable. Check Ollama, model downloads, and run cargo run -- import. See server logs for details.".into())
+    ApiError(StatusCode::SERVICE_UNAVAILABLE,"Service unavailable. Check configured providers and the knowledge index. See server logs for details.".into())
 }
 #[derive(Deserialize)]
 struct Question {
@@ -73,50 +80,8 @@ fn validate(q: &Question) -> Result<(), ApiError> {
     }
     Ok(())
 }
-async fn local_boundary(request: axum::extract::Request, next: axum::middleware::Next) -> Response {
-    fn local_host(url: &reqwest::Url) -> bool {
-        matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"))
-    }
-    let host = request
-        .headers()
-        .get("host")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| reqwest::Url::parse(&format!("http://{v}")).ok());
-    if !host.as_ref().is_some_and(local_host) {
-        return (StatusCode::FORBIDDEN, "Loopback host required").into_response();
-    }
-    if let Some(origin) = request.headers().get("origin") {
-        let origin = origin
-            .to_str()
-            .ok()
-            .and_then(|v| reqwest::Url::parse(v).ok());
-        // Match the public Host port, which may differ from the container listener.
-        let port = host
-            .as_ref()
-            .and_then(|u| u.port_or_known_default())
-            .unwrap_or(3730);
-        if !origin.as_ref().is_some_and(|u| {
-            local_host(u)
-                && u.scheme() == "http"
-                && matches!(u.port_or_known_default(),Some(p) if p==port||p==5173)
-        }) {
-            return (StatusCode::FORBIDDEN, "Cross-origin access denied").into_response();
-        }
-    }
-    let mut response = next.run(request).await;
-    response
-        .headers_mut()
-        .insert("x-content-type-options", "nosniff".parse().unwrap());
-    response
-        .headers_mut()
-        .insert("referrer-policy", "no-referrer".parse().unwrap());
-    response
-        .headers_mut()
-        .insert("x-frame-options", "DENY".parse().unwrap());
-    response
-}
-async fn status(State(app): State<App>) -> Json<Value> {
-    let meta = store::open(&app.db).and_then(|db| store::metadata(&db));
+async fn status(Extension(app): Extension<App>) -> Json<Value> {
+    let meta = store::open(&app.library_db).and_then(|db| store::metadata(&db));
     let identity = app.embedder.identity().await;
     let compatible = matches!((&meta,&identity),(Ok(m),Ok(i)) if m.identity==*i);
     let (chat, vision, speech) = tokio::join!(
@@ -137,30 +102,34 @@ async fn status(State(app): State<App>) -> Json<Value> {
         json!({"ready":compatible,"index":meta.ok(),"embedding_available":identity.is_ok(),
         "chat_provider":app.generator.provider(),"chat_model":app.generator.model(),"chat_setup":if app.generator.provider()=="groq"{"Use scripts/setup.py to configure your Groq API key and model. Images use the independent vision provider."}else{"Install models with scripts/setup.py, or use ollama pull for the configured model."}, "chat_available":chat.as_ref().is_ok_and(|c| c.text),"local_only":local_only,
         "vision_provider":app.vision.provider(),"vision_model":app.vision.model(), "vision_available":image_ready,
-        "document_processing":pdf,"video_processing":video,"transcription":speech, "storage":"SQLite + sqlite-vec",
+        "document_processing":pdf,"video_processing":video,"transcription":speech, "storage":"SQLite + sqlite-vec", "authenticated":app.auth.required,
         "capabilities":{"text":chat.as_ref().is_ok_and(|c| c.text),"image_input":image_ready,"audio_input":speech.ready,"audio_local":app.transcriber.is_local(),"image_local":app.vision.is_local(),
-            "audio_mode":"transcription","video_input":video.ready&&image_ready,"pdf_input":pdf.ready,"pdf_visual_input":pdf.ready&&image_ready,"max_pdf_pages":processors::MAX_PDF_PAGES,"max_video_seconds":processors::MAX_VIDEO_SECONDS,"attachments":true,"max_file_bytes":12582912,"max_audio_seconds":120,"max_images":processors::MAX_VISUAL_INPUTS},
+            "audio_mode":"transcription","video_input":video.ready&&image_ready,"pdf_input":pdf.ready,"pdf_visual_input":pdf.ready&&image_ready,"max_pdf_pages":processors::MAX_PDF_PAGES,"max_video_seconds":processors::MAX_VIDEO_SECONDS,"attachments":true,"max_file_bytes":12582912,"max_audio_seconds":120,"max_images":app.vision.max_images()},
         "note":"Images use the vision model. Audio is transcribed before generation. PDFs provide page text and rendered scans. Videos provide sampled frames plus speech transcripts."}),
     )
 }
-async fn sources(State(app): State<App>) -> Result<Json<Value>, ApiError> {
-    let db = store::open(&app.db).map_err(internal)?;
+async fn sources(Extension(app): Extension<App>) -> Result<Json<Value>, ApiError> {
+    let db = store::open(&app.library_db).map_err(internal)?;
     Ok(Json(json!(store::sources(&db).map_err(internal)?)))
 }
 async fn retrieve(app: &App, q: &Question) -> Result<Vec<store::Chunk>> {
     if q.mode.as_deref() == Some("keyword") {
-        return store::keyword_search(&store::open(&app.db)?, &q.question);
+        return store::keyword_search(&store::open(&app.library_db)?, &q.question);
     }
-    let meta = store::metadata(&store::open(&app.db)?)?;
+    let meta = store::metadata(&store::open(&app.library_db)?)?;
     let identity = app.embedder.identity().await?;
     if meta.identity != identity {
         anyhow::bail!("Embedding configuration changed: reimport corpus");
     }
     let vectors = app.embedder.embed(vec![q.question.clone()], true).await?;
-    store::vector_search(&store::open(&app.db)?, &vectors[0], &meta)
+    store::vector_search(&store::open(&app.library_db)?, &vectors[0], &meta)
 }
-async fn search(State(app): State<App>, Json(q): Json<Question>) -> Result<Json<Value>, ApiError> {
+async fn search(
+    Extension(app): Extension<App>,
+    Json(q): Json<Question>,
+) -> Result<Json<Value>, ApiError> {
     validate(&q)?;
+    control::authorize_chat(&app, &q)?;
     let _permit = app.busy.clone().try_acquire_owned().map_err(|_| {
         ApiError(
             StatusCode::TOO_MANY_REQUESTS,
@@ -183,8 +152,12 @@ fn finish(run: &mut conversations::RunRecord, outcome: &str, notice: Option<&str
         }
     }
 }
-async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Response, ApiError> {
+async fn chat(
+    Extension(app): Extension<App>,
+    Json(q): Json<Question>,
+) -> Result<Response, ApiError> {
     validate(&q)?;
+    control::authorize_chat(&app, &q)?;
     let permit = app.busy.clone().try_acquire_owned().map_err(|_| {
         ApiError(
             StatusCode::TOO_MANY_REQUESTS,
@@ -220,6 +193,12 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
     if let Some(id) = &q.conversation_id {
         let c = conversations::load(&app.db, id)
             .map_err(|_| ApiError(StatusCode::NOT_FOUND, "Conversation not found.".into()))?;
+        if c.messages.len() >= 200 {
+            return Err(ApiError(
+                StatusCode::CONFLICT,
+                "This conversation has reached 200 messages. Start a new conversation.".into(),
+            ));
+        }
         if c.archived {
             return Err(ApiError(
                 StatusCode::CONFLICT,
@@ -270,7 +249,7 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
                 "input.progress",
                 json!({"stage":if a.mime.starts_with("audio/"){"transcribing"}else{"preparing"},"attachment_id":a.id,"message":match a.mime.as_str(){"application/pdf"=>"Extracting PDF pages",m if m.starts_with("video/")=>"Sampling video and transcribing speech",m if m.starts_with("audio/")=>"Transcribing audio",_=>"Preparing attachment"}}),
             );
-            let prepared = match media::prepare(&app.db, &a.id, app.transcriber.as_ref(), &app.processors, None).await {
+            let prepared = match app.auth.guard(app.user.as_ref(),media::prepare(&app.db, &a.id, app.transcriber.as_ref(), &app.processors, None)).await {
                 Ok(prepared) => prepared,
                 Err(e) => {
                     eprintln!("Media input: {e:#}");
@@ -329,8 +308,8 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
             );
             return;
         }
-        if input.images.len()>processors::MAX_VISUAL_INPUTS {
-            yield event("run.ended",finish(&mut run,"failed",Some("This message exceeds eight visual inputs (images, scanned PDF pages and video frames). Attach fewer files or split them into smaller parts."))); return;
+        if input.images.len()>app.vision.max_images() {
+            yield event("run.ended",finish(&mut run,"failed",Some("This message exceeds the configured vision model’s image limit (including scanned PDF pages and video frames). Attach fewer files or split them into smaller parts."))); return;
         }
         let mut image_labels=input.images.iter().map(|i|i.label.clone()).collect::<std::collections::HashSet<_>>();
         let mut budget = 16000usize.saturating_sub(input.content.chars().count());
@@ -358,7 +337,7 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
                 }
             }
             let size = turn.content.chars().count();
-            if size > budget || image_count + turn.images.len() > processors::MAX_VISUAL_INPUTS {
+            if size > budget || image_count + turn.images.len() > app.vision.max_images() {
                 break;
             }
             budget -= size;
@@ -456,7 +435,9 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
                 q.question
             );
         }
-        let mut output = match generator.generate(system, input, history).await {
+        if !app.auth.valid(app.user.as_ref()) {yield event("run.ended",finish(&mut run,"interrupted",Some("Session ended. Please sign in.")));return;}
+        let system=control::chat_prompt(&app,system);
+        let mut output = match app.auth.guard(app.user.as_ref(),generator.generate(system, input, history)).await {
             Ok(s) => s,
             Err(e) => {
                 eprintln!("Generation: {e:#}");
@@ -465,15 +446,28 @@ async fn chat(State(app): State<App>, Json(q): Json<Question>) -> Result<Respons
                     finish(
                         &mut run,
                         "failed",
-                        Some("The model could not start. Check provider credentials, model access and quota, then retry."),
+                        Some(e.downcast_ref::<providers::ProviderFailure>().map(|v|v.0.as_str()).unwrap_or("The model could not start. Check provider credentials, model access and quota, then retry.")),
                     ),
                 );
                 return;
             }
         };
-        while let Some(item) = output.next().await {
+        let mut session_check=tokio::time::interval(Duration::from_secs(2));
+        loop {
+            let item=tokio::select! {
+                result=output.next()=>match result {Some(item)=>item,None=>break},
+                _=session_check.tick()=>{
+                    if !app.auth.valid(app.user.as_ref()) {
+                        yield event("run.ended",finish(&mut run,"interrupted",Some("Your session ended. Sign in to continue.")));
+                        return;
+                    }
+                    continue;
+                }
+            };
             match item {
                 Ok(GenerationEvent::Delta(text)) => {
+                    // Normalize presentation only; evidence IDs still must match exactly.
+                    let text=if grounded {text.replace('【', "[").replace('】', "]")} else {text};
                     run.message.content.push_str(&text);
                     if run.last_flush.elapsed() > Duration::from_millis(250)
                         && let Err(e) = run.flush()
@@ -576,7 +570,14 @@ async fn main() -> Result<()> {
     {
         std::fs::create_dir_all(parent)?;
     }
+    let authentication = Arc::new(auth::Auth::configured(&db)?);
     let command = std::env::args().nth(1).unwrap_or_else(|| "serve".into());
+    if command == "auth" {
+        return auth::cli(
+            &authentication,
+            &std::env::args().skip(2).collect::<Vec<_>>(),
+        );
+    }
     if command == "import" {
         let corpus = std::env::args().nth(2).unwrap_or_else(|| "corpus".into());
         println!(
@@ -592,7 +593,18 @@ async fn main() -> Result<()> {
     }
     store::open(&db)?;
     conversations::recover(&db)?;
+    if authentication.required {
+        for entry in std::fs::read_dir(&authentication.users_dir)? {
+            let path = entry?.path();
+            if path.extension().is_some_and(|e| e == "sqlite") {
+                conversations::recover(&path.to_string_lossy())?;
+            }
+        }
+    }
     let app = App {
+        library_db: db.clone(),
+        auth: authentication,
+        user: None,
         db,
         embedder,
         generator,
@@ -602,6 +614,13 @@ async fn main() -> Result<()> {
         busy: Arc::new(Semaphore::new(1)),
     };
     let router = Router::new()
+        .route("/api/auth/session", get(auth::session))
+        .route("/api/auth/login", post(auth::login))
+        .route("/api/auth/enroll", post(auth::enroll))
+        .route("/api/auth/logout", post(auth::logout))
+        .route("/api/control/catalog", get(control::catalog))
+        .route("/api/control/propose", post(control::propose))
+        .route("/api/control/execute", post(control::execute))
         .route(
             "/api/conversations",
             get(conversations::list).post(conversations::create),
@@ -630,7 +649,10 @@ async fn main() -> Result<()> {
         .route("/api/chat", post(chat))
         .layer(DefaultBodyLimit::max(65536))
         .fallback_service(tower_http::services::ServeDir::new("frontend/dist"))
-        .layer(axum::middleware::from_fn(local_boundary))
+        .layer(axum::middleware::from_fn_with_state(
+            app.clone(),
+            auth::boundary,
+        ))
         .with_state(app);
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "3730".into())

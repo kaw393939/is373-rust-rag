@@ -4,6 +4,7 @@ export async function api(path, options = {}) {
     ...(options.body ? { body: JSON.stringify(options.body) } : {})
   });
   if (!response.ok) {
+    if(response.status===401&&!path.startsWith('/auth/'))window.dispatchEvent(new Event('ordo:unauthorized'));
     let error; try { error = (await response.json()).error; } catch { /* HTTP fallback */ }
     throw new Error(error || `Request failed (${response.status}). Please try again.`);
   }
