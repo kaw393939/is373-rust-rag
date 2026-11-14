@@ -2,14 +2,16 @@
   import {onMount} from 'svelte';
   import {ArrowUp,Check,LoaderCircle,ShieldCheck,ChevronDown} from 'lucide-svelte';
   import {api} from '../lib/api.js';
+  import {adminHistory} from '../lib/admin.js';
   let catalog=null,request='',entries=[],busy=false,error='',selected='',fields={},direct=false;
   $: tool=catalog?.tools.find(t=>t.name===selected);
   async function load(){catalog=await api('/control/catalog');}
   onMount(()=>{load().catch(e=>error=e.message);});
   async function propose(action){
     error='';busy=true;const label=action?`Direct action: ${action.tool}`:request.trim();if(!label){busy=false;return;}
+    const history=adminHistory(entries);
     entries=[...entries,{kind:'request',text:label}];request='';
-    try{const result=await api('/control/propose',{method:'POST',body:action?{action}:{request:label}});entries=[...entries,{kind:result.question?'question':'proposal',...result,text:result.question}];}
+    try{const result=await api('/control/propose',{method:'POST',body:action?{action}:{request:label,history}});entries=[...entries,{kind:result.question?'question':'proposal',...result,text:result.question}];}
     catch(e){error=e.message;}finally{busy=false;}
   }
   async function execute(entry){busy=true;error='';try{const result=await api('/control/execute',{method:'POST',body:{id:entry.id}});entry.done=true;entries=[...entries,{kind:'result',...result}];await load();}catch(e){entry.expired=true;entries=[...entries];error=e.message;}finally{busy=false;}}

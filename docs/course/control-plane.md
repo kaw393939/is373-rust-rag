@@ -22,7 +22,7 @@ flowchart TD
   T --> UI[Structured result; secrets shown once]
 ```
 
-The chat assistant and administration workspace are separate. Normal chat processes documents as evidence and has no administrative execution channel. The admin planner receives only the user's administrative request and authorized tool metadata. Attachments, retrieved documents, invitation tokens, API keys, passwords and other people's conversations are absent from that prompt. The planner can ask for missing information; it cannot call a shell, invent an API endpoint or grant itself capabilities.
+The chat assistant and administration workspace are separate. Normal chat processes documents as evidence and has no administrative execution channel. The admin planner receives the current request, up to six bounded prior requests/questions/previews (at most 6 KiB), and authorized tool metadata. Follow-up answers can therefore resolve a clarifying question. This client-supplied history is untrusted context, never evidence of execution or authority. Attachments, retrieved documents, invitation tokens, API keys, passwords and other people's conversations are absent from that prompt. The planner can ask for missing information; it cannot call a shell, invent an API endpoint or grant itself capabilities.
 
 ## The registry is code, not a list in a prompt
 
@@ -57,7 +57,7 @@ A typed proposal looks like this:
 There are two small prompt assemblies:
 
 1. Normal chat combines the grounded/general system policy with a runtime capability/feature summary. Retrieval evidence, bounded history and current input are assembled separately. Chat still cannot execute tools.
-2. Administration combines a fixed `admin-v1` policy, the filtered registry and a strict JSON output contract. The user request is a separate message. No account list or tool result is silently sent to the model.
+2. Administration combines a fixed `admin-v1` policy, the filtered registry and a strict JSON output contract. The current request and bounded conversation history are separate messages. No account list or tool result is silently sent to the model.
 
 This is the first implementation of Ordo's named-slot idea, not a complete prompt-packet platform. Version and authorized action metadata are retained with the preview/receipt; full prompt bodies and chain-of-thought are not logged. Future prompt packets can add source manifests, exact token counts, privacy preflight and approved business-profile snapshots without changing the execution authority.
 
